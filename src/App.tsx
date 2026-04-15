@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, Circle, Images, RefreshCcw, Sparkles } from 'lucide-react'
+import { Camera, Circle, Download, Images, RefreshCcw, Sparkles } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ type StripPhoto = {
   id: number
   time: string
   tint: string
+  dataUrl?: string
 }
 
 const sampleStrip: StripPhoto[] = [
@@ -45,7 +46,7 @@ function App() {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
         setCameraReady(true)
-      } catch (error) {
+      } catch {
         setCameraError('Camera belum bisa diakses. Izinkan camera permission untuk pengalaman penuh.')
       }
     }
@@ -61,15 +62,7 @@ function App() {
   useEffect(() => {
     if (countdown === null) return
     if (countdown === 0) {
-      const now = new Date()
-      setCaptured((prev) => [
-        {
-          id: Date.now(),
-          time: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-          tint: ['from-sky-400/30 to-cyan-200/20', 'from-fuchsia-400/30 to-rose-200/20', 'from-emerald-400/30 to-lime-200/20', 'from-amber-300/30 to-orange-200/20'][prev.length % 4],
-        },
-        ...prev,
-      ].slice(0, 8))
+      captureAndDownload()
       setCountdown(null)
       return
     }
@@ -84,6 +77,43 @@ function App() {
     if (cameraReady) return 'FaceTime HD Camera'
     return 'Preparing camera'
   }, [cameraError, cameraReady, countdown])
+
+  function captureAndDownload() {
+    const video = videoRef.current
+    if (!video || !cameraReady) return
+
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth || 1280
+    canvas.height = video.videoHeight || 720
+
+    const context = canvas.getContext('2d')
+    if (!context) return
+
+    context.translate(canvas.width, 0)
+    context.scale(-1, 1)
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    const dataUrl = canvas.toDataURL('image/png')
+    const now = new Date()
+    const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    const fileStamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
+
+    const newPhoto: StripPhoto = {
+      id: Date.now(),
+      time,
+      tint: ['from-sky-400/30 to-cyan-200/20', 'from-fuchsia-400/30 to-rose-200/20', 'from-emerald-400/30 to-lime-200/20', 'from-amber-300/30 to-orange-200/20'][captured.length % 4],
+      dataUrl,
+    }
+
+    setCaptured((prev) => [newPhoto, ...prev].slice(0, 8))
+
+    const link = document.createElement('a')
+    link.href = dataUrl
+    link.download = `photobooth-${fileStamp}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   return (
     <main className="min-h-screen bg-[#0b0d10] px-4 py-5 text-white md:px-8">
@@ -167,7 +197,7 @@ function App() {
                   <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-3 text-sm text-white/65">
                       <Sparkles className="size-4" />
-                      Capture strip otomatis dengan nuansa Photo Booth ala macOS.
+                      Setelah capture, foto otomatis langsung terunduh ke device.
                     </div>
                     <div className="flex items-center justify-center gap-4">
                       <Button
@@ -219,13 +249,17 @@ function App() {
                   className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                 >
                   <div className={`relative aspect-[4/5] bg-gradient-to-br ${photo.tint}`}>
+                    {photo.dataUrl ? (
+                      <img src={photo.dataUrl} alt={`Capture ${index + 1}`} className="h-full w-full object-cover scale-x-[-1]" />
+                    ) : null}
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.28),transparent_36%)]" />
                     <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/25 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent" />
                     <div className="absolute left-4 top-4 rounded-full bg-black/30 px-3 py-1 text-xs text-white/80">
                       Booth {String(index + 1).padStart(2, '0')}
                     </div>
-                    <div className="absolute bottom-4 right-4 rounded-full bg-white/12 px-3 py-1 text-xs text-white backdrop-blur">
+                    <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs text-white backdrop-blur">
+                      {photo.dataUrl ? <Download className="size-3.5" /> : null}
                       {photo.time}
                     </div>
                   </div>
