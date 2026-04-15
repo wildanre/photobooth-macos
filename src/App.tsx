@@ -1,23 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, Circle, Download, Images, RefreshCcw, Sparkles } from 'lucide-react'
+import { Camera, Circle, Download, ImageIcon, Images, RectangleHorizontal, RectangleVertical, RefreshCcw, Video } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
+type CaptureMode = 'landscape' | 'portrait'
+
 type StripPhoto = {
   id: number
   time: string
   tint: string
   dataUrl?: string
+  mode: CaptureMode
 }
 
 const sampleStrip: StripPhoto[] = [
-  { id: 1, time: '09:41', tint: 'from-sky-400/30 to-cyan-200/20' },
-  { id: 2, time: '09:42', tint: 'from-fuchsia-400/30 to-rose-200/20' },
-  { id: 3, time: '09:43', tint: 'from-emerald-400/30 to-lime-200/20' },
-  { id: 4, time: '09:44', tint: 'from-amber-300/30 to-orange-200/20' },
+  { id: 1, time: '09:41', tint: 'from-sky-400/30 to-cyan-200/20', mode: 'landscape' },
+  { id: 2, time: '09:42', tint: 'from-fuchsia-400/30 to-rose-200/20', mode: 'landscape' },
+  { id: 3, time: '09:43', tint: 'from-emerald-400/30 to-lime-200/20', mode: 'landscape' },
+  { id: 4, time: '09:44', tint: 'from-amber-300/30 to-orange-200/20', mode: 'landscape' },
 ]
 
 function App() {
@@ -26,6 +29,7 @@ function App() {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [captured, setCaptured] = useState<StripPhoto[]>(sampleStrip)
+  const [captureMode, setCaptureMode] = useState<CaptureMode>('landscape')
 
   useEffect(() => {
     let mounted = true
@@ -83,15 +87,30 @@ function App() {
     if (!video || !cameraReady) return
 
     const canvas = document.createElement('canvas')
-    canvas.width = video.videoWidth || 1280
-    canvas.height = video.videoHeight || 720
+    const sourceWidth = video.videoWidth || 1280
+    const sourceHeight = video.videoHeight || 720
+
+    if (captureMode === 'portrait') {
+      canvas.width = Math.floor(sourceHeight * 0.72)
+      canvas.height = sourceHeight
+    } else {
+      canvas.width = sourceWidth
+      canvas.height = sourceHeight
+    }
 
     const context = canvas.getContext('2d')
     if (!context) return
 
     context.translate(canvas.width, 0)
     context.scale(-1, 1)
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    if (captureMode === 'portrait') {
+      const cropWidth = Math.min(sourceWidth * 0.58, sourceHeight * 0.72)
+      const sx = (sourceWidth - cropWidth) / 2
+      context.drawImage(video, sx, 0, cropWidth, sourceHeight, 0, 0, canvas.width, canvas.height)
+    } else {
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    }
 
     const dataUrl = canvas.toDataURL('image/png')
     const now = new Date()
@@ -103,6 +122,7 @@ function App() {
       time,
       tint: ['from-sky-400/30 to-cyan-200/20', 'from-fuchsia-400/30 to-rose-200/20', 'from-emerald-400/30 to-lime-200/20', 'from-amber-300/30 to-orange-200/20'][captured.length % 4],
       dataUrl,
+      mode: captureMode,
     }
 
     setCaptured((prev) => [newPhoto, ...prev].slice(0, 8))
@@ -135,8 +155,8 @@ function App() {
           </div>
         </div>
 
-        <div className="grid flex-1 gap-0 lg:grid-cols-[1fr_320px]">
-          <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_25%),linear-gradient(180deg,#1a1e26_0%,#090b0e_100%)] p-5 md:p-7">
+        <div className="flex flex-1 flex-col">
+          <section className="relative flex-1 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_25%),linear-gradient(180deg,#1a1e26_0%,#090b0e_100%)] p-3 md:p-4">
             <div className="absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),transparent)] opacity-60" />
 
             <Card className="relative h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
@@ -193,31 +213,61 @@ function App() {
                   )}
                 </div>
 
-                <div className="border-t border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-6 py-5 backdrop-blur-xl">
-                  <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-3 text-sm text-white/65">
-                      <Sparkles className="size-4" />
-                      Setelah capture, foto otomatis langsung terunduh ke device.
-                    </div>
-                    <div className="flex items-center justify-center gap-4">
-                      <Button
-                        variant="ghost"
-                        className="rounded-full border border-white/10 bg-white/8 px-5 text-white hover:bg-white/15"
-                      >
-                        <Images data-icon="inline-start" />
-                        Gallery
-                      </Button>
+                <div className="border-t border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-5 py-5 backdrop-blur-xl">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/6 p-1">
                       <button
                         type="button"
-                        onClick={() => setCountdown(3)}
-                        className="group relative flex size-24 items-center justify-center rounded-full border border-white/20 bg-[linear-gradient(180deg,#ff6b66,#ff3b30)] shadow-[0_18px_30px_rgba(255,59,48,0.45)] transition-transform duration-200 hover:scale-[1.03]"
+                        className="flex size-10 items-center justify-center rounded-lg text-white/55"
                       >
-                        <span className="absolute inset-[10px] rounded-full border-4 border-white/80" />
-                        <Circle className="size-8 fill-white text-white" />
+                        <Images className="size-4" />
                       </button>
+                      <button
+                        type="button"
+                        className="flex size-10 items-center justify-center rounded-lg bg-[#2f80ff] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]"
+                      >
+                        <ImageIcon className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex size-10 items-center justify-center rounded-lg text-white/55"
+                      >
+                        <Video className="size-4" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setCountdown(3)}
+                      className="group relative flex size-24 items-center justify-center rounded-full border border-white/20 bg-[linear-gradient(180deg,#ff453a,#ff2d1f)] shadow-[0_18px_30px_rgba(255,59,48,0.45)] transition-transform duration-200 hover:scale-[1.03]"
+                    >
+                      <span className="absolute inset-[10px] rounded-full border-4 border-white/80" />
+                      <Circle className="size-8 fill-white text-white" />
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/6 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setCaptureMode('landscape')}
+                          className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition ${captureMode === 'landscape' ? 'bg-white/12 text-white' : 'text-white/55'}`}
+                        >
+                          <RectangleHorizontal className="size-4" />
+                          Landscape
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCaptureMode('portrait')}
+                          className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition ${captureMode === 'portrait' ? 'bg-white/12 text-white' : 'text-white/55'}`}
+                        >
+                          <RectangleVertical className="size-4" />
+                          Portrait
+                        </button>
+                      </div>
+
                       <Button
                         variant="ghost"
-                        className="rounded-full border border-white/10 bg-white/8 px-5 text-white hover:bg-white/15"
+                        className="rounded-xl border border-white/10 bg-white/8 px-5 text-white hover:bg-white/15"
                       >
                         <RefreshCcw data-icon="inline-start" />
                         Effects
@@ -229,36 +279,36 @@ function App() {
             </Card>
           </section>
 
-          <aside className="flex flex-col border-l border-white/8 bg-[linear-gradient(180deg,#1b1f27_0%,#11141a_100%)] p-5 md:p-6">
-            <div className="flex items-center justify-between">
+          <aside className="border-t border-white/8 bg-[linear-gradient(180deg,#1b1f27_0%,#11141a_100%)] px-5 py-4 md:px-6">
+            <div className="mb-4 flex items-center justify-between">
               <div>
                 <p className="text-sm text-white/55">Photo Strip</p>
-                <h2 className="text-2xl font-semibold tracking-tight">Recent shots</h2>
+                <h2 className="text-xl font-semibold tracking-tight">Recent shots</h2>
               </div>
               <Badge variant="secondary" className="rounded-full bg-white/10 px-3 py-1.5 text-white/90">
                 {captured.length} captures
               </Badge>
             </div>
 
-            <Separator className="my-5 bg-white/10" />
+            <Separator className="mb-4 bg-white/10" />
 
-            <div className="flex flex-1 flex-col gap-4 overflow-auto pr-1">
+            <div className="flex gap-4 overflow-x-auto pb-2">
               {captured.map((photo, index) => (
                 <div
                   key={photo.id}
-                  className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                  className={`shrink-0 overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${photo.mode === 'portrait' ? 'w-36' : 'w-56'}`}
                 >
-                  <div className={`relative aspect-[4/5] bg-gradient-to-br ${photo.tint}`}>
+                  <div className={`relative ${photo.mode === 'portrait' ? 'aspect-[3/4]' : 'aspect-[16/10]'} bg-gradient-to-br ${photo.tint}`}>
                     {photo.dataUrl ? (
                       <img src={photo.dataUrl} alt={`Capture ${index + 1}`} className="h-full w-full object-cover scale-x-[-1]" />
                     ) : null}
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.28),transparent_36%)]" />
                     <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/25 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent" />
-                    <div className="absolute left-4 top-4 rounded-full bg-black/30 px-3 py-1 text-xs text-white/80">
+                    <div className="absolute left-3 top-3 rounded-full bg-black/30 px-3 py-1 text-xs text-white/80">
                       Booth {String(index + 1).padStart(2, '0')}
                     </div>
-                    <div className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs text-white backdrop-blur">
+                    <div className="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs text-white backdrop-blur">
                       {photo.dataUrl ? <Download className="size-3.5" /> : null}
                       {photo.time}
                     </div>
