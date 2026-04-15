@@ -1,35 +1,36 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, Circle, Download, ImageIcon, Images, RectangleHorizontal, RectangleVertical, RefreshCcw, Video } from 'lucide-react'
+import {
+  Camera,
+  Circle,
+  Download,
+  Moon,
+  RectangleHorizontal,
+  RectangleVertical,
+  Sun,
+} from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
 type CaptureMode = 'landscape' | 'portrait'
+type ThemeMode = 'dark' | 'light'
 
-type StripPhoto = {
+type CapturePhoto = {
   id: number
   time: string
-  tint: string
-  dataUrl?: string
+  dataUrl: string
   mode: CaptureMode
 }
-
-const sampleStrip: StripPhoto[] = [
-  { id: 1, time: '09:41', tint: 'from-sky-400/30 to-cyan-200/20', mode: 'landscape' },
-  { id: 2, time: '09:42', tint: 'from-fuchsia-400/30 to-rose-200/20', mode: 'landscape' },
-  { id: 3, time: '09:43', tint: 'from-emerald-400/30 to-lime-200/20', mode: 'landscape' },
-  { id: 4, time: '09:44', tint: 'from-amber-300/30 to-orange-200/20', mode: 'landscape' },
-]
 
 function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [cameraReady, setCameraReady] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<number | null>(null)
-  const [captured, setCaptured] = useState<StripPhoto[]>(sampleStrip)
+  const [captured, setCaptured] = useState<CapturePhoto[]>([])
   const [captureMode, setCaptureMode] = useState<CaptureMode>('landscape')
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark')
 
   useEffect(() => {
     let mounted = true
@@ -51,7 +52,7 @@ function App() {
         await videoRef.current.play()
         setCameraReady(true)
       } catch {
-        setCameraError('Camera belum bisa diakses. Izinkan camera permission untuk pengalaman penuh.')
+        setCameraError('Camera belum bisa diakses. Izinkan akses camera untuk menggunakan photobooth.')
       }
     }
 
@@ -78,9 +79,29 @@ function App() {
   const statusLabel = useMemo(() => {
     if (cameraError) return 'Permission needed'
     if (countdown !== null) return `Capture in ${countdown}`
-    if (cameraReady) return 'FaceTime HD Camera'
+    if (cameraReady) return captureMode === 'landscape' ? 'Landscape' : 'Portrait'
     return 'Preparing camera'
-  }, [cameraError, cameraReady, countdown])
+  }, [cameraError, cameraReady, countdown, captureMode])
+
+  const shellClass =
+    themeMode === 'dark'
+      ? 'bg-[#17181c] text-white border-white/10 shadow-[0_28px_80px_rgba(0,0,0,0.42)]'
+      : 'bg-[#f6f6f7] text-[#111827] border-black/10 shadow-[0_28px_80px_rgba(15,23,42,0.16)]'
+
+  const toolbarClass =
+    themeMode === 'dark'
+      ? 'border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))]'
+      : 'border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(240,240,242,0.85))]'
+
+  const stageClass =
+    themeMode === 'dark'
+      ? 'bg-[linear-gradient(180deg,#0f1013_0%,#0a0b0d_100%)]'
+      : 'bg-[linear-gradient(180deg,#d9dde3_0%,#cfd5dd_100%)]'
+
+  const panelClass =
+    themeMode === 'dark'
+      ? 'border-white/8 bg-[linear-gradient(180deg,#25262b_0%,#222328_100%)]'
+      : 'border-black/8 bg-[linear-gradient(180deg,#ececef_0%,#e3e4e8_100%)]'
 
   function captureAndDownload() {
     const video = videoRef.current
@@ -117,15 +138,14 @@ function App() {
     const time = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
     const fileStamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19)
 
-    const newPhoto: StripPhoto = {
+    const newPhoto: CapturePhoto = {
       id: Date.now(),
       time,
-      tint: ['from-sky-400/30 to-cyan-200/20', 'from-fuchsia-400/30 to-rose-200/20', 'from-emerald-400/30 to-lime-200/20', 'from-amber-300/30 to-orange-200/20'][captured.length % 4],
       dataUrl,
       mode: captureMode,
     }
 
-    setCaptured((prev) => [newPhoto, ...prev].slice(0, 8))
+    setCaptured((prev) => [newPhoto, ...prev].slice(0, 12))
 
     const link = document.createElement('a')
     link.href = dataUrl
@@ -136,41 +156,72 @@ function App() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0b0d10] px-4 py-5 text-white md:px-8">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#13161c] shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
-        <div className="flex items-center justify-between border-b border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.04))] px-5 py-3 backdrop-blur-xl">
+    <main
+      className={`min-h-screen px-4 py-5 md:px-8 ${
+        themeMode === 'dark' ? 'bg-[#0d0e11]' : 'bg-[#e7e8ec]'
+      }`}
+    >
+      <div
+        className={`mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-7xl flex-col overflow-hidden rounded-[1.75rem] border ${shellClass}`}
+      >
+        <div className={`flex items-center justify-between border-b px-5 py-3 backdrop-blur-xl ${toolbarClass}`}>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="size-3 rounded-full bg-[#ff5f57]" />
               <span className="size-3 rounded-full bg-[#febc2e]" />
               <span className="size-3 rounded-full bg-[#28c840]" />
             </div>
-            <div className="hidden items-center gap-2 rounded-full bg-white/6 px-3 py-1 text-sm text-white/80 md:flex">
+            <div className="flex items-center gap-2 text-sm font-medium opacity-80">
               <Camera className="size-4" />
               Photo Booth
             </div>
           </div>
-          <div className="rounded-full border border-white/10 bg-black/20 px-4 py-1.5 text-sm text-white/70">
-            macOS inspired camera UI
+
+          <div className="flex items-center gap-2 rounded-full border border-black/5 bg-black/5 p-1 dark:bg-white/5">
+            <button
+              type="button"
+              onClick={() => setThemeMode('light')}
+              className={`flex size-8 items-center justify-center rounded-full ${
+                themeMode === 'light' ? 'bg-white text-[#111827] shadow-sm' : 'opacity-55'
+              }`}
+            >
+              <Sun className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setThemeMode('dark')}
+              className={`flex size-8 items-center justify-center rounded-full ${
+                themeMode === 'dark' ? 'bg-black/70 text-white shadow-sm' : 'opacity-55'
+              }`}
+            >
+              <Moon className="size-4" />
+            </button>
           </div>
         </div>
 
         <div className="flex flex-1 flex-col">
-          <section className="relative flex-1 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_25%),linear-gradient(180deg,#1a1e26_0%,#090b0e_100%)] p-3 md:p-4">
-            <div className="absolute inset-x-0 top-0 h-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),transparent)] opacity-60" />
-
-            <Card className="relative h-full overflow-hidden rounded-[1.75rem] border border-white/10 bg-black/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
+          <section className={`relative flex-1 overflow-hidden p-4 ${stageClass}`}>
+            <Card
+              className={`relative h-full overflow-hidden rounded-[1.5rem] border shadow-none ${
+                themeMode === 'dark'
+                  ? 'border-white/8 bg-black'
+                  : 'border-black/8 bg-[#101114]'
+              }`}
+            >
               <CardContent className="relative flex h-full flex-col p-0">
-                <div className="absolute left-5 top-5 z-20 flex items-center gap-3">
-                  <Badge className="rounded-full bg-black/45 px-3 py-1.5 text-white hover:bg-black/45">
+                <div className="absolute left-4 top-4 z-20">
+                  <Badge
+                    className={`rounded-full px-3 py-1.5 hover:bg-inherit ${
+                      themeMode === 'dark'
+                        ? 'bg-black/55 text-white'
+                        : 'bg-white/85 text-[#111827]'
+                    }`}
+                  >
                     {statusLabel}
-                  </Badge>
-                  <Badge variant="secondary" className="rounded-full bg-white/12 px-3 py-1.5 text-white/90">
-                    Portrait
                   </Badge>
                 </div>
 
-                <div className="relative flex-1 overflow-hidden rounded-[1.75rem]">
+                <div className="relative flex-1 overflow-hidden">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -179,24 +230,20 @@ function App() {
                     className="h-full w-full object-cover scale-x-[-1]"
                   />
 
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_45%,rgba(0,0,0,0.35)_100%)]" />
-                  <div className="pointer-events-none absolute inset-0 border-[14px] border-black/10" />
-
                   {!cameraReady && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-[linear-gradient(180deg,rgba(26,30,38,0.75),rgba(9,11,14,0.9))]">
-                      <div className="flex max-w-md flex-col items-center gap-4 text-center">
-                        <div className="flex size-24 items-center justify-center rounded-[2rem] border border-white/10 bg-white/6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-                          <Camera className="size-10 text-white/80" />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/55">
+                      <div className="flex max-w-md flex-col items-center gap-4 text-center text-white">
+                        <div className="flex size-20 items-center justify-center rounded-[1.5rem] border border-white/10 bg-white/5">
+                          <Camera className="size-9" />
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <h1 className="text-3xl font-semibold tracking-tight text-white">Photo Booth</h1>
-                          <p className="text-sm leading-6 text-white/65">
-                            Tampilan dibuat menyerupai aplikasi macOS, dengan preview kamera besar,
-                            strip hasil di samping, dan kontrol capture di bagian bawah.
+                        <div className="space-y-2">
+                          <h1 className="text-3xl font-semibold tracking-tight">Photo Booth</h1>
+                          <p className="text-sm leading-6 text-white/70">
+                            Izinkan akses camera untuk mulai mengambil foto.
                           </p>
                         </div>
                         {cameraError ? (
-                          <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                          <div className="rounded-xl border border-white/10 bg-white/8 px-4 py-3 text-sm text-white/80">
                             {cameraError}
                           </div>
                         ) : null}
@@ -205,118 +252,106 @@ function App() {
                   )}
 
                   {countdown !== null && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-                      <div className="flex size-36 items-center justify-center rounded-full border border-white/20 bg-black/35 text-6xl font-semibold text-white shadow-2xl">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <div className="flex size-32 items-center justify-center rounded-full border border-white/20 bg-black/40 text-5xl font-semibold text-white">
                         {countdown}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="border-t border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-5 py-5 backdrop-blur-xl">
+                <div className={`border-t px-5 py-4 backdrop-blur-xl ${panelClass}`}>
                   <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 rounded-xl border border-white/8 bg-white/6 p-1">
+                    <div className="flex items-center gap-2 rounded-xl border border-black/8 bg-black/6 p-1 dark:border-white/8 dark:bg-white/6">
                       <button
                         type="button"
-                        className="flex size-10 items-center justify-center rounded-lg text-white/55"
+                        onClick={() => setCaptureMode('landscape')}
+                        className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition ${
+                          captureMode === 'landscape'
+                            ? themeMode === 'dark'
+                              ? 'bg-white/10 text-white'
+                              : 'bg-white text-[#111827] shadow-sm'
+                            : 'opacity-55'
+                        }`}
                       >
-                        <Images className="size-4" />
+                        <RectangleHorizontal className="size-4" />
+                        Landscape
                       </button>
                       <button
                         type="button"
-                        className="flex size-10 items-center justify-center rounded-lg bg-[#2f80ff] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]"
+                        onClick={() => setCaptureMode('portrait')}
+                        className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition ${
+                          captureMode === 'portrait'
+                            ? themeMode === 'dark'
+                              ? 'bg-white/10 text-white'
+                              : 'bg-white text-[#111827] shadow-sm'
+                            : 'opacity-55'
+                        }`}
                       >
-                        <ImageIcon className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="flex size-10 items-center justify-center rounded-lg text-white/55"
-                      >
-                        <Video className="size-4" />
+                        <RectangleVertical className="size-4" />
+                        Portrait
                       </button>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setCountdown(3)}
-                      className="group relative flex size-24 items-center justify-center rounded-full border border-white/20 bg-[linear-gradient(180deg,#ff453a,#ff2d1f)] shadow-[0_18px_30px_rgba(255,59,48,0.45)] transition-transform duration-200 hover:scale-[1.03]"
+                      disabled={!cameraReady}
+                      className="relative flex size-24 items-center justify-center rounded-full border border-white/20 bg-[linear-gradient(180deg,#ff453a,#ff2d1f)] shadow-[0_18px_30px_rgba(255,59,48,0.28)] transition-transform duration-200 hover:scale-[1.02] disabled:opacity-40"
                     >
                       <span className="absolute inset-[10px] rounded-full border-4 border-white/80" />
                       <Circle className="size-8 fill-white text-white" />
                     </button>
 
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/6 p-1">
-                        <button
-                          type="button"
-                          onClick={() => setCaptureMode('landscape')}
-                          className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition ${captureMode === 'landscape' ? 'bg-white/12 text-white' : 'text-white/55'}`}
-                        >
-                          <RectangleHorizontal className="size-4" />
-                          Landscape
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setCaptureMode('portrait')}
-                          className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm transition ${captureMode === 'portrait' ? 'bg-white/12 text-white' : 'text-white/55'}`}
-                        >
-                          <RectangleVertical className="size-4" />
-                          Portrait
-                        </button>
-                      </div>
-
-                      <Button
-                        variant="ghost"
-                        className="rounded-xl border border-white/10 bg-white/8 px-5 text-white hover:bg-white/15"
-                      >
-                        <RefreshCcw data-icon="inline-start" />
-                        Effects
-                      </Button>
-                    </div>
+                    <div className="w-[164px]" />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </section>
 
-          <aside className="border-t border-white/8 bg-[linear-gradient(180deg,#1b1f27_0%,#11141a_100%)] px-5 py-4 md:px-6">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white/55">Photo Strip</p>
-                <h2 className="text-xl font-semibold tracking-tight">Recent shots</h2>
-              </div>
-              <Badge variant="secondary" className="rounded-full bg-white/10 px-3 py-1.5 text-white/90">
-                {captured.length} captures
-              </Badge>
-            </div>
-
-            <Separator className="mb-4 bg-white/10" />
-
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {captured.map((photo, index) => (
-                <div
-                  key={photo.id}
-                  className={`shrink-0 overflow-hidden rounded-[1.25rem] border border-white/10 bg-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${photo.mode === 'portrait' ? 'w-36' : 'w-56'}`}
+          {captured.length > 0 && (
+            <aside className={`border-t px-5 py-4 md:px-6 ${panelClass}`}>
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-55">Recent</p>
+                </div>
+                <Badge
+                  variant="secondary"
+                  className={`rounded-full px-3 py-1.5 ${
+                    themeMode === 'dark' ? 'bg-white/10 text-white' : 'bg-black/6 text-[#111827]'
+                  }`}
                 >
-                  <div className={`relative ${photo.mode === 'portrait' ? 'aspect-[3/4]' : 'aspect-[16/10]'} bg-gradient-to-br ${photo.tint}`}>
-                    {photo.dataUrl ? (
-                      <img src={photo.dataUrl} alt={`Capture ${index + 1}`} className="h-full w-full object-cover scale-x-[-1]" />
-                    ) : null}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.28),transparent_36%)]" />
-                    <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/25 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent" />
-                    <div className="absolute left-3 top-3 rounded-full bg-black/30 px-3 py-1 text-xs text-white/80">
-                      Booth {String(index + 1).padStart(2, '0')}
-                    </div>
-                    <div className="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs text-white backdrop-blur">
-                      {photo.dataUrl ? <Download className="size-3.5" /> : null}
-                      {photo.time}
+                  {captured.length} photos
+                </Badge>
+              </div>
+
+              <Separator className={themeMode === 'dark' ? 'mb-4 bg-white/10' : 'mb-4 bg-black/10'} />
+
+              <div className="flex gap-4 overflow-x-auto pb-2">
+                {captured.map((photo, index) => (
+                  <div
+                    key={photo.id}
+                    className={`shrink-0 overflow-hidden rounded-[1.1rem] border ${
+                      themeMode === 'dark' ? 'border-white/8 bg-black/20' : 'border-black/8 bg-white/80'
+                    } ${photo.mode === 'portrait' ? 'w-36' : 'w-56'}`}
+                  >
+                    <div className={`relative ${photo.mode === 'portrait' ? 'aspect-[3/4]' : 'aspect-[16/10]'}`}>
+                      <img
+                        src={photo.dataUrl}
+                        alt={`Capture ${index + 1}`}
+                        className="h-full w-full object-cover scale-x-[-1]"
+                      />
+                      <div className="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-black/35 px-3 py-1 text-xs text-white backdrop-blur">
+                        <Download className="size-3.5" />
+                        {photo.time}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </aside>
+                ))}
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </main>
