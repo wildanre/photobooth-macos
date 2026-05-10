@@ -147,6 +147,7 @@ function App() {
 
     setCaptured((prev) => [newPhoto, ...prev].slice(0, 12))
 
+    // Otomatis download setelah capture (permintaan user)
     const link = document.createElement('a')
     link.href = dataUrl
     link.download = `photobooth-${fileStamp}.png`
